@@ -113,13 +113,35 @@ All test data was removed afterwards. The database is back to the imported state
 - **Deletes:** every delete button needs two clicks.
 - **Cleanup:** test content was removed afterwards. Regression checks: 472 links and assets OK, sitemap 46 URLs, /blog/ identical to WordPress.
 
+## Deploying to Vercel
+
+The live WordPress site stays untouched. Deployments are **noindex** (header + robots.txt) until `ALLOW_INDEXING=true` is set at domain cutover.
+
+1. **GitHub:** keep this repository **private**. It contains the commercial Gerow theme and Elementor Pro stylesheets (their licences don't allow public redistribution) and the migration audit, which describes security problems on the live WordPress site.
+2. **Vercel → Add New → Project:** import `blueinctech-developer/bridgeandvalue`. The defaults are fine (framework Next.js, `npm run build`).
+3. **Vercel → project → Storage:**
+   - **Create a Neon Postgres database** and connect it to the project. This sets `DATABASE_URL`.
+   - **Create a Blob store** and connect it. This sets `BLOB_READ_WRITE_TOKEN`.
+4. **Load the content into the hosted database** (from this computer):
+   - Copy the database's `DATABASE_URL` into a new file `.env.prod.local` (git-ignored; Next.js doesn't read it).
+   - Run `npm run db:import:prod`. This creates the tables and imports the pages, media list, menu, redirects and the 37 enquiries (from `data/legacy`, which stays on this computer).
+5. **Create your administrator account:**
+   - Add `ADMIN_EMAIL`, `ADMIN_NAME` and a strong `ADMIN_PASSWORD` (12+ characters) to `.env.prod.local`.
+   - Run `npm run admin:create:prod`, then remove the password line from the file.
+6. **Vercel → Deployments → Redeploy,** so the pre-rendered pages are built from the imported content.
+7. **Domain cutover (later, after sign-off):**
+   - Add `bridgeandvalue.com` in Vercel and set `ALLOW_INDEXING=true`.
+   - At Hostinger, change only the A/CNAME records (**keep the MX records for Google Workspace email**).
+   - Resubmit `sitemap.xml` in Google Search Console.
+
+Notes:
+- Sign-in and form rate limits are per server instance.
+- Scheduled posts appear within an hour of their publish time.
+
 ## Not done yet
 
 - **Email notifications** for new enquiries. This needs an email account (WordPress used Amazon SES).
-- **Production database and storage:**
-  - Point `lib/db/client.mjs` at a hosted PostgreSQL (e.g. Neon) via `DATABASE_URL`.
-  - Move uploads to object storage (Vercel Blob or S3).
-  - The local PGlite and `.data/uploads` are for development only.
+
 - **Blog comments** (the WordPress blog had none) and RSS feeds (disabled on the WordPress site).
 - **Two-factor sign-in** for administrators.
-- **Deployment and domain cutover.**
+- **Deployment and domain cutover:** code is ready (Neon via `DATABASE_URL`, Vercel Blob via `BLOB_READ_WRITE_TOKEN`); see "Deploying to Vercel". The hosted database path has not been run yet.
