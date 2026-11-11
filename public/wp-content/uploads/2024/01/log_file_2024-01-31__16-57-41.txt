@@ -1,0 +1,51 @@
+
+---Downloaded files---
+The import files for: Home Default were successfully downloaded!
+Initial max execution time = 360
+Files info:
+Site URL = https://new.bridgeandvalue.com
+Data file = /home/u431795952/domains/bridgeandvalue.com/public_html/new/wp-content/themes/gerow/sample-data/contents-demo.xml
+Widget file = /home/u431795952/domains/bridgeandvalue.com/public_html/new/wp-content/themes/gerow/sample-data/widget-settings.json
+Customizer file = /home/u431795952/domains/bridgeandvalue.com/public_html/new/wp-content/themes/gerow/sample-data/customizer-data.dat
+Redux files:
+not defined!
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+------
+New AJAX call!
+
+
+---Importing widgets---
+Blog Sidebar : 
+
+Search - Search Here - Imported
+Categories - Categories - Imported
+Gerow Sidebar Posts - Most Popular - Imported
+Tag Cloud - Tag Cloud - Imported
+
+
+
+---Importing customizer settings---
+Customizer settings import finished!
+
+---ocdi/after_import---
+

@@ -1,0 +1,32 @@
+[
+  {
+    "source": "/elementor-hf/footer-style-three/",
+    "destination": "/",
+    "permanent": true,
+    "reason": "existing WP behaviour: template URL already 301s to /"
+  },
+  {
+    "source": "/elementor-hf/footer-style-two/",
+    "destination": "/",
+    "permanent": true,
+    "reason": "existing WP behaviour: template URL already 301s to /"
+  },
+  {
+    "source": "/elementor-hf/footer-style-one/",
+    "destination": "/",
+    "permanent": true,
+    "reason": "existing WP behaviour: template URL already 301s to /"
+  },
+  {
+    "source": "/home-three/",
+    "destination": "/",
+    "permanent": true,
+    "reason": "existing WP redirect (front page slug)"
+  },
+  {
+    "source": "/wp-sitemap.xml",
+    "destination": "/sitemap.xml",
+    "permanent": true,
+    "reason": "WP core sitemap"
+  }
+]

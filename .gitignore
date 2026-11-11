@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+.env*.local
+data/submissions.jsonl
+next-env.d.ts
+*.tsbuildinfo
+data/legacy/
+.data/
