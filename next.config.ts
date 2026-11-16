@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // WordPress URLs all end in a slash; keep them identical for SEO.
   trailingSlash: true,
   // Embedded PostgreSQL ships WASM files that must not be bundled.
-  serverExternalPackages: ["@electric-sql/pglite"],
+  serverExternalPackages: ["@electric-sql/pglite", "ws"],
   // Media uploads; one build worker because the local embedded database allows a single process.
   experimental: { serverActions: { bodySizeLimit: "12mb" }, cpus: 1 },
   async redirects() {
