@@ -134,7 +134,10 @@ The live WordPress site stays untouched. Deployments are **noindex** (header + r
    - At Hostinger, change only the A/CNAME records (**keep the MX records for Google Workspace email**).
    - Resubmit `sitemap.xml` in Google Search Console.
 
+Status 2026-11-16: deployed as Vercel project **bridgeandvalue-zchh** (https://bridgeandvalue-zchh.vercel.app) with Neon Postgres (Frankfurt). The content is imported and the admin account created. Live check: 472 links/assets OK, sitemap 46 URLs, 301s, canonicals, the Google verification tag, form validation and search all work, and the site is noindex until cutover.
+
 Notes:
+- On the Hobby plan, Vercel only deploys commits authored by the project owner. This repository is configured to commit as `blueinctech-developer`.
 - Sign-in and form rate limits are per server instance.
 - Scheduled posts appear within an hour of their publish time.
 
@@ -144,4 +147,4 @@ Notes:
 
 - **Blog comments** (the WordPress blog had none) and RSS feeds (disabled on the WordPress site).
 - **Two-factor sign-in** for administrators.
-- **Deployment and domain cutover:** code is ready (Neon via `DATABASE_URL`, Vercel Blob via `BLOB_READ_WRITE_TOKEN`); see "Deploying to Vercel". The hosted database path has not been run yet.
+- **Domain cutover** to bridgeandvalue.com (see step 7 of "Deploying to Vercel").
