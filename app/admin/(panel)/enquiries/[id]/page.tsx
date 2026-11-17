@@ -48,7 +48,7 @@ export default async function Enquiry({ params }: { params: Promise<{ id: string
             </div>
           ))}
           <dt>Status</dt><dd><span className="badge">{s.status}</span></dd>
-          {s.email_sent === false && (<><dt>Notification</dt><dd><span className="badge amber">WordPress failed to email this enquiry</span></dd></>)}
+          {s.email_sent === false && (<><dt>Notification</dt><dd><span className="badge amber">The notification email could not be sent</span></dd></>)}
           {s.legacy_id && (<><dt>Source</dt><dd className="muted">Migrated from WordPress (Elementor submission #{s.legacy_id})</dd></>)}
         </dl>
       </div>

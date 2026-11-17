@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/db";
+import { mailConfigured } from "@/lib/mail";
 import { saveSettings } from "../actions";
 import Notice from "../Notice";
 
@@ -41,7 +42,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <div className="card">
           <h2>Enquiry notifications</h2>
           <div className="field"><label htmlFor="notify_recipient">Send new enquiries to</label><input id="notify_recipient" name="notify_recipient" type="email" defaultValue={s.notifications?.recipient} /></div>
-          <div className="notice warn" style={{ margin: 0 }}>Email sending isn&apos;t connected yet. Enquiries are saved in the admin inbox. Connecting needs an email account (WordPress used Amazon SES).</div>
+          {mailConfigured ? (
+            <div className="notice ok" style={{ margin: 0 }}>New enquiries are emailed through Amazon SES to this address (or the public contact email if it&apos;s empty), and are always saved in the admin inbox.</div>
+          ) : (
+            <div className="notice warn" style={{ margin: 0 }}>Email sending isn&apos;t connected yet (Amazon SES settings). Enquiries are saved in the admin inbox.</div>
+          )}
         </div>
         <div className="card">
           <h2>Search engines</h2>
