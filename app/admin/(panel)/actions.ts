@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser, revokeSessions } from "@/lib/auth";
 import { logActivity, one, sql, type BlockFields, type BlockRow, type PageRow } from "@/lib/db";
 import { hashPassword, passwordProblem, verifyPassword } from "@/lib/password.mjs";
-import { deleteUpload, saveUpload } from "@/lib/storage";
+import { deleteUpload, saveUpload, storageStatus } from "@/lib/storage";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const back = (url: string, msg: string, kind: "ok" | "err" = "ok"): never => {
@@ -115,15 +115,27 @@ export async function uploadMedia(formData: FormData) {
   const user = await requireUser();
   const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   if (!files.length) back("/admin/media/", "Choose at least one file.", "err");
+  // On Vercel the server's disk is read-only, so uploads need Amazon S3 or a Vercel Blob store.
+  if (process.env.VERCEL && storageStatus().store === "local") {
+    back("/admin/media/", "File storage isn't connected yet. Add the Amazon S3 settings (or connect a Vercel Blob store) in Vercel, then redeploy.", "err");
+  }
+  const maxBytes = process.env.VERCEL ? 4 * 1024 * 1024 : 10 * 1024 * 1024; // Vercel caps request bodies at 4.5 MB
   const now = new Date();
   const sub = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}`;
   let n = 0;
   for (const f of files) {
     const ext = UPLOAD_TYPES[f.type];
     if (!ext) back("/admin/media/", `${f.name}: only JPG, PNG, WebP, GIF and PDF files can be uploaded.`, "err");
-    if (f.size > 10 * 1024 * 1024) back("/admin/media/", `${f.name} is larger than 10 MB.`, "err");
+    if (f.size > maxBytes) back("/admin/media/", `${f.name} is larger than ${maxBytes / 1024 / 1024} MB. Please resize it and try again.`, "err");
     const base = f.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "file";
-    const stored = await saveUpload(sub, base, ext, Buffer.from(await f.arrayBuffer()), f.type);
+    let stored = "";
+    try {
+      stored = await saveUpload(sub, base, ext, Buffer.from(await f.arrayBuffer()), f.type);
+    } catch (err) {
+      console.error("Upload failed:", err);
+      const reason = err instanceof Error ? err.message : String(err);
+      back("/admin/media/", `${f.name} couldn't be saved${n ? ` (${n} earlier file${n === 1 ? " was" : "s were"} saved)` : ""}: ${reason.slice(0, 200)}`, "err");
+    }
     await sql(`INSERT INTO media (path, mime_type, filesize, title, source) VALUES ($1,$2,$3,$4,'upload')`, [stored, f.type, f.size, base.replace(/-/g, " ")]);
     n++;
   }

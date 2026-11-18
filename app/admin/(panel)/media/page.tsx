@@ -42,7 +42,7 @@ export default async function Media({ searchParams }: { searchParams: Promise<{ 
         <form action={uploadMedia} className="row">
           <input type="file" name="files" multiple accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" aria-label="Files to upload" required />
           <button className="btn" type="submit">Upload</button>
-          <span className="muted small">JPG, PNG, WebP, GIF or PDF, up to 10 MB each.</span>
+          <span className="muted small">JPG, PNG, WebP, GIF or PDF, up to {process.env.VERCEL ? 4 : 10} MB each.</span>
         </form>
         <p className="muted small" style={{ margin: "8px 0 0" }}>
           {(() => {
