@@ -13,14 +13,50 @@ export type SliderConfig = {
     responsive?: { breakpoint: number; settings: { slidesToShow?: number } }[];
   };
 };
-export type PopupSettings = { enabled: boolean; delaySeconds: number };
+/** A pop-up that may open on this page (lib/popups.ts PopupConfig; its markup is already in the page). */
+export type PagePopup = {
+  id: number;
+  kind: "custom" | "elementor";
+  elementorId: string | null;
+  delaySeconds: number;
+  frequency: "always" | "session" | "day" | "once";
+  startsAt: string | null;
+  endsAt: string | null;
+  version: string;
+};
+
+/** Whether the visitor should see this pop-up now: within its dates and its "how often" rule. */
+function popupDue(p: PagePopup): boolean {
+  const now = Date.now();
+  if (p.startsAt && Date.parse(p.startsAt) > now) return false;
+  if (p.endsAt && Date.parse(p.endsAt) <= now) return false;
+  if (p.frequency === "always") return true;
+  const key = `bv-popup-${p.version}`;
+  try {
+    const store = p.frequency === "session" ? sessionStorage : localStorage;
+    const seen = Number(store.getItem(key) || 0);
+    if (p.frequency === "day") return !seen || now - seen > 24 * 3600_000;
+    return !seen;
+  } catch {
+    return true; // storage blocked: show it, as WordPress did
+  }
+}
+
+function markPopupSeen(p: PagePopup) {
+  if (p.frequency === "always") return;
+  try {
+    (p.frequency === "session" ? sessionStorage : localStorage).setItem(`bv-popup-${p.version}`, String(Date.now()));
+  } catch {
+    /* storage blocked */
+  }
+}
 
 /**
  * Re-implements, without jQuery or WordPress, the front-end behaviour that the
  * Gerow theme (main.js), Elementor and Contact Form 7 scripts provided.
  * Each block names the original behaviour it replaces.
  */
-export default function SiteBehaviors({ path, sliders, popup }: { path: string; sliders: SliderConfig[]; popup: PopupSettings }) {
+export default function SiteBehaviors({ path, sliders, popups }: { path: string; sliders: SliderConfig[]; popups: PagePopup[] }) {
   useEffect(() => {
     // The migrated WordPress markup is not always tag-balanced, so the browser
     // can close #page-content early and hoist trailing elements (footer
@@ -179,17 +215,20 @@ export default function SiteBehaviors({ path, sliders, popup }: { path: string; 
     // Theme hero slider (initialised by the theme's widget script, not inline): one slide at a time.
     $$(".slider-active").forEach((el) => cleanups.push(slick(el, { slidesToShow: 1, autoplay: true, speed: 1000 })));
 
-    // Elementor Pro popup #2245: opens 5s after page load on the home page.
-    $$("[data-elementor-type='popup']").forEach((p) => {
-      const s = JSON.parse(p.getAttribute("data-elementor-settings") || "{}");
-      if (p.classList.contains("elementor-location-popup")) {
-        p.style.display = "none";
-        if (popup.enabled && s.triggers?.page_load === "yes") {
-          const t = setTimeout(() => openPopup(p), Math.max(0, Number(popup.delaySeconds) || 0) * 1000);
-          cleanups.push(() => clearTimeout(t));
-        }
-      }
-    });
+    // Pop-ups (Admin → Pop-ups): migrated Elementor ones live hidden in the page markup, ones
+    // created in the admin in #bv-popups. The first that is due opens after its delay; only one
+    // per page view, so they never stack.
+    $$("[data-elementor-type='popup'].elementor-location-popup").forEach((p) => (p.style.display = "none"));
+    const due = popups.find(popupDue);
+    const content =
+      due && document.querySelector<HTMLElement>(`[data-elementor-type='popup'][data-elementor-id='${due.kind === "custom" ? `bv-${due.id}` : due.elementorId}']`);
+    if (due && content) {
+      const t = setTimeout(() => {
+        openPopup(content);
+        markPopupSeen(due);
+      }, Math.max(0, due.delaySeconds) * 1000);
+      cleanups.push(() => clearTimeout(t));
+    }
 
     // Forms: Contact Form 7 and Elementor Pro form -> /api/forms
     $$<HTMLFormElement>("form.wpcf7-form").forEach((f) => on(f, "submit", (e) => { e.preventDefault(); submitCf7(f, path); }));
@@ -198,7 +237,7 @@ export default function SiteBehaviors({ path, sliders, popup }: { path: string; 
     $$<HTMLFormElement>("form.bv-brochure-form").forEach((f) => on(f, "submit", (e) => { e.preventDefault(); submitBrochure(f, path); }));
 
     return () => cleanups.forEach((c) => c());
-  }, [path, sliders, popup.enabled, popup.delaySeconds]);
+  }, [path, sliders, popups]);
 
   return null;
 }
@@ -301,6 +340,8 @@ function openPopup(content: HTMLElement) {
   const modal = document.createElement("div");
   modal.id = `elementor-popup-modal-${id}`;
   modal.className = "dialog-widget dialog-lightbox-widget dialog-type-buttons dialog-type-lightbox elementor-popup-modal";
+  // Pop-ups made in the admin are centred and backed like the migrated one (public/bv-popup.css).
+  if (content.classList.contains("bv-popup")) modal.classList.add("bv-popup-modal");
   modal.style.display = "flex";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
@@ -318,16 +359,27 @@ function openPopup(content: HTMLElement) {
   const placeholder = document.createComment("popup");
   content.replaceWith(placeholder);
   // popup.min.css hides every [data-elementor-type=popup]; Elementor shows the open one inline, as here.
-  content.style.display = "block";
+  // Pop-ups made in the admin lay their image and text side by side (bv-popup.css).
+  content.style.display = content.classList.contains("bv-popup") ? "flex" : "block";
   msg.appendChild(content);
   box.append(closeBtn, msg);
   modal.appendChild(box);
-  const close = () => { modal.remove(); content.style.display = "none"; placeholder.replaceWith(content); document.removeEventListener("keydown", esc); };
+  const opener = document.activeElement as HTMLElement | null;
+  const close = () => {
+    modal.remove();
+    content.style.display = "none";
+    placeholder.replaceWith(content);
+    document.removeEventListener("keydown", esc);
+    opener?.focus?.();
+  };
   const esc = (e: KeyboardEvent) => e.key === "Escape" && close();
   closeBtn.addEventListener("click", close);
+  closeBtn.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), close()));
   modal.addEventListener("click", (e) => e.target === modal && close());
   document.addEventListener("keydown", esc);
   document.body.appendChild(modal);
+  // Keyboard users land on the close button and can dismiss the pop-up straight away.
+  closeBtn.focus({ preventScroll: true });
 }
 
 async function post(form: string, page: string, fields: Record<string, string>) {

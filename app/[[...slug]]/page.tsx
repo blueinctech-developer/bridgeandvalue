@@ -5,6 +5,7 @@ import { listPublicPaths, SITE_URL } from "@/lib/cms";
 import { excerptOf, postPath } from "@/lib/blog";
 import { resolvePath } from "@/lib/routes";
 import { absoluteMedia } from "@/lib/media";
+import { popupsFor } from "@/lib/popups";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 
@@ -60,7 +61,7 @@ export default async function Page({ params }: Props) {
   return (
     <>
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />}
-      <LegacyPage page={page} />
+      <LegacyPage page={page} popups={await popupsFor(page.path)} />
     </>
   );
 }

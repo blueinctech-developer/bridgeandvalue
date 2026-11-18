@@ -201,7 +201,6 @@ async function inShell(
     body_class: meta.bodyClass ?? shell.body_class,
     html,
     sliders: [],
-    popup: { enabled: false, delaySeconds: 0 },
   };
 }
 
