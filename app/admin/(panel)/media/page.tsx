@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { deleteMedia, saveMediaAlt, uploadMedia } from "../actions";
 import Notice from "../Notice";
 import ConfirmButton from "../ConfirmButton";
+import { storageStatus } from "@/lib/storage";
 
 export const metadata = { title: "Media" };
 
@@ -43,6 +44,14 @@ export default async function Media({ searchParams }: { searchParams: Promise<{ 
           <button className="btn" type="submit">Upload</button>
           <span className="muted small">JPG, PNG, WebP, GIF or PDF, up to 10 MB each.</span>
         </form>
+        <p className="muted small" style={{ margin: "8px 0 0" }}>
+          {(() => {
+            const s = storageStatus();
+            return s.store === "s3"
+              ? `New uploads are stored in Amazon S3 (${s.bucket}).`
+              : `New uploads are stored in ${s.store === "blob" ? "Vercel Blob" : "this computer’s .data folder"}. To use Amazon S3, add ${s.missingS3.join(", ")} in the hosting settings and redeploy.`;
+          })()}
+        </p>
       </div>
       <div className="row" style={{ marginBottom: 12 }}>
         <div className="filters" style={{ margin: 0 }}>

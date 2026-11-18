@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { getSettings, one, sql } from "@/lib/db";
+import { enquiryEmail, mailConfigured, sendMail } from "@/lib/mail";
 
 /**
  * Receives submissions from the migrated forms (Elementor contact form and
- * Contact Form 7 "Get A Free Quote") and stores them for the admin inbox.
- * Email notification is not configured yet (email_sent stays NULL).
+ * Contact Form 7 "Get A Free Quote"), stores them for the admin inbox and, when
+ * Amazon SES is set up (lib/mail.ts), emails them to Admin → Settings → "Send new
+ * enquiries to" (or the public contact email). email_sent records the outcome; it
+ * stays NULL while email isn't set up. An email failure never fails the submission.
  */
 const FORMS: Record<string, { required: string[]; email: string[] }> = {
   contact: { required: ["email"], email: ["email"] }, // Elementor form on /contact-us/
@@ -46,8 +49,26 @@ export async function POST(req: Request) {
     body.form === "quote"
       ? { name: fields["your-name"], email: fields["your-email"], message: fields["your-message"] ?? "" }
       : fields;
-  await sql(`INSERT INTO submissions (form, page, fields) VALUES ($1, $2, $3)`, [
-    body.form, String(body.page ?? "").slice(0, 300), JSON.stringify(normalised),
+  const page = String(body.page ?? "").slice(0, 300);
+  const row = await one<{ id: number }>(`INSERT INTO submissions (form, page, fields) VALUES ($1, $2, $3) RETURNING id`, [
+    body.form, page, JSON.stringify(normalised),
   ]);
+
+  if (row && mailConfigured) {
+    let sent = false;
+    try {
+      const s = await getSettings();
+      const to = s.notifications?.recipient || s.contact?.email;
+      if (to) {
+        const visitor = EMAIL_RE.test(normalised.email ?? "") ? normalised.email : undefined;
+        const { subject, text } = enquiryEmail({ id: row.id, form: body.form!, page, fields: normalised, siteUrl: new URL(req.url).origin });
+        await sendMail({ to, subject, text, replyTo: visitor });
+        sent = true;
+      } else console.warn("[forms] no enquiry recipient set (Admin → Settings)");
+    } catch (err) {
+      console.error("[forms] enquiry email not sent", err);
+    }
+    await sql(`UPDATE submissions SET email_sent = $2 WHERE id = $1`, [row.id, sent]);
+  }
   return NextResponse.json({ ok: true });
 }

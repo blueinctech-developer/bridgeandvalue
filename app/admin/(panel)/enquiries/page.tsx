@@ -71,7 +71,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
               <td className="small muted" style={{ whiteSpace: "nowrap" }}>{fmtDate(r.created_at)}</td>
               <td>
                 <span className={`badge ${r.status === "new" ? "red" : r.status === "read" ? "green" : ""}`}>{r.status}</span>
-                {r.email_sent === false && <div><span className="badge amber" title="WordPress failed to send the notification email">email failed</span></div>}
+                {r.email_sent === false && <div><span className="badge amber" title="The notification email could not be sent">email failed</span></div>}
               </td>
             </tr>
           ))}
