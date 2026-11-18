@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getSettings, sql } from "@/lib/db";
 import { mailConfigured } from "@/lib/mail";
@@ -32,14 +33,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p className="muted small">Contact details shown inside page content are edited on each page (Pages → content blocks).</p>
         </div>
         <div className="card">
-          <h2>Business Mission pop-up (home page)</h2>
-          <div className="row">
-            <label className="check"><input type="checkbox" name="popup_enabled" defaultChecked={s.popup?.enabled} /> Show the pop-up</label>
-            <label htmlFor="popup_delay" style={{ margin: 0 }}>after</label>
-            <input id="popup_delay" name="popup_delay" type="number" min={0} max={60} defaultValue={s.popup?.delaySeconds} style={{ width: 80 }} />
-            <span>seconds</span>
-          </div>
-          <p className="muted small" style={{ marginTop: 8 }}>The pop-up&apos;s text is edited on the Home page (its blocks are listed at the end).</p>
+          <h2>Pop-ups</h2>
+          <p className="muted" style={{ margin: 0 }}>Pop-ups, including the Business Mission one, are turned on and off, scheduled and created under <Link href="/admin/popups/">Pop-ups</Link>.</p>
         </div>
         <div className="card">
           <h2>Enquiry notifications</h2>

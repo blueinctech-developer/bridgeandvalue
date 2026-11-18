@@ -12,6 +12,7 @@ const CONTENT = [
   { href: "/admin/enquiries/", label: "Enquiries", badge: true },
   { href: "/admin/media/", label: "Media" },
   { href: "/admin/menu/", label: "Menu" },
+  { href: "/admin/popups/", label: "Pop-ups" },
 ];
 const SITE = [
   { href: "/admin/seo/", label: "SEO overview" },

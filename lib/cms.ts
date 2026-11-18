@@ -1,11 +1,11 @@
 import "server-only";
 import { cache } from "react";
-import { getSettings, one, sql, type BlockRow, type PageRow } from "./db";
+import { one, sql, type BlockRow, type PageRow } from "./db";
 import { renderHtml } from "./blocks.mjs";
 
 export const SITE_URL = "https://bridgeandvalue.com";
 
-export type RenderedPage = Omit<PageRow, "html"> & { html: string; popup: { enabled: boolean; delaySeconds: number } };
+export type RenderedPage = Omit<PageRow, "html"> & { html: string };
 
 /** Published page by URL path, with all edits applied. */
 export const getRenderedPage = cache(async (path: string, { includeDrafts = false } = {}): Promise<RenderedPage | null> => {
@@ -21,12 +21,11 @@ export const getNotFoundPage = cache(async () => {
 });
 
 async function render(page: PageRow): Promise<RenderedPage> {
-  const [pageBlocks, globalBlocks, menu, media, settings] = await Promise.all([
+  const [pageBlocks, globalBlocks, menu, media] = await Promise.all([
     sql<BlockRow>(`SELECT element_id, widget_type, content FROM blocks WHERE page_id = $1 AND content IS NOT NULL`, [page.id]),
     sql<BlockRow>(`SELECT element_id, widget_type, content FROM blocks WHERE page_id IS NULL AND content IS NOT NULL`),
     sql<{ label: string; url: string; new_tab: boolean }>(`SELECT label, url, new_tab FROM menu_items WHERE menu = 'main' ORDER BY position`),
     sql<{ path: string; alt_text: string }>(`SELECT path, alt_text FROM media WHERE alt_text <> ''`),
-    getSettings(),
   ]);
   const html = renderHtml(page.html, {
     pageBlocks,
@@ -35,7 +34,7 @@ async function render(page: PageRow): Promise<RenderedPage> {
     altByPath: new Map(media.map((m) => [m.path, m.alt_text])),
     currentPath: page.path,
   });
-  return { ...page, html, popup: settings.popup ?? { enabled: true, delaySeconds: 5 } };
+  return { ...page, html };
 }
 
 export async function listPublicPaths() {

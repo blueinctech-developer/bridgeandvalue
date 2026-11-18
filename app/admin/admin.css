@@ -84,6 +84,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid rgba(60, 139, 202
 .btn.danger { background: #fff; color: var(--red); border-color: #efc2bc; }
 .btn.danger:hover { background: #fdf0ee; }
 .btn.small { padding: 4px 10px; font-size: 13px; }
+/* Links styled as buttons ("New page", "Reply by email"…): beat `.admin a`'s blue text. */
+.admin a.btn, .admin a.btn:hover { color: #fff; }
+.admin a.btn.secondary, .admin a.btn.secondary:hover { color: var(--ink); }
+.admin a.btn.danger { color: var(--red); }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .row.end { justify-content: flex-end; }
 .spacer { flex: 1; }
