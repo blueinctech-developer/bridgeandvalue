@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { getSettings, one, sql } from "@/lib/db";
-import { enquiryEmail, mailConfigured, sendMail } from "@/lib/mail";
+import { brochureEmail, enquiryEmail, mailConfigured, sendMail } from "@/lib/mail";
 
 /**
- * Receives submissions from the migrated forms (Elementor contact form and
- * Contact Form 7 "Get A Free Quote"), stores them for the admin inbox and, when
- * Amazon SES is set up (lib/mail.ts), emails them to Admin → Settings → "Send new
- * enquiries to" (or the public contact email). email_sent records the outcome; it
- * stays NULL while email isn't set up. An email failure never fails the submission.
+ * Receives submissions from the migrated forms (Elementor contact form, Contact
+ * Form 7 "Get A Free Quote" and the footer's "Request our Brochure"), stores them
+ * for the admin inbox and, when Amazon SES is set up (lib/mail.ts), emails them to
+ * Admin → Settings → "Send new enquiries to" (or the public contact email).
+ * A brochure request also emails the visitor a link to the brochure chosen in
+ * Settings. email_sent records whether staff were notified; it stays NULL while
+ * email isn't set up. An email failure never fails the submission.
  */
 const FORMS: Record<string, { required: string[]; email: string[] }> = {
   contact: { required: ["email"], email: ["email"] }, // Elementor form on /contact-us/
   quote: { required: ["your-name", "your-email"], email: ["your-email"] }, // CF7 on service pages
+  brochure: { required: ["email"], email: ["email"] }, // footer "Request our Brochure" (lib/brochure.ts)
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,10 +37,14 @@ export async function POST(req: Request) {
   }
   const def = body.form ? FORMS[body.form] : undefined;
   if (!def || !body.fields) return NextResponse.json({ ok: false, message: "Unknown form." }, { status: 400 });
-  if (body.website) return NextResponse.json({ ok: true }); // honeypot filled: silently drop
+  // Honeypot filled (sent alongside the form or among its fields): silently drop.
+  if (body.website || body.fields.website) return NextResponse.json({ ok: true });
 
   const fields = Object.fromEntries(
-    Object.entries(body.fields).slice(0, 20).map(([k, v]) => [k.slice(0, 100), String(v ?? "").slice(0, 5000).trim()])
+    Object.entries(body.fields)
+      .filter(([k]) => k !== "website")
+      .slice(0, 20)
+      .map(([k, v]) => [k.slice(0, 100), String(v ?? "").slice(0, 5000).trim()])
   );
   const invalid: Record<string, string> = {};
   for (const k of def.required) if (!fields[k]) invalid[k] = "This field is required.";
@@ -54,14 +61,25 @@ export async function POST(req: Request) {
     body.form, page, JSON.stringify(normalised),
   ]);
 
+  let brochureSent = false;
   if (row && mailConfigured) {
     let sent = false;
+    const s = await getSettings().catch(() => null);
+    // The visitor's brochure first, so their email isn't held up by the staff notification.
+    if (body.form === "brochure" && s?.brochure?.url) {
+      try {
+        const { subject, text } = brochureEmail({ url: s.brochure.url, siteUrl: new URL(req.url).origin, contactEmail: s.contact?.email });
+        await sendMail({ to: normalised.email, subject, text, replyTo: s.notifications?.recipient || s.contact?.email || undefined });
+        brochureSent = true;
+      } catch (err) {
+        console.error("[forms] brochure email not sent", err);
+      }
+    }
     try {
-      const s = await getSettings();
-      const to = s.notifications?.recipient || s.contact?.email;
+      const to = s?.notifications?.recipient || s?.contact?.email;
       if (to) {
         const visitor = EMAIL_RE.test(normalised.email ?? "") ? normalised.email : undefined;
-        const { subject, text } = enquiryEmail({ id: row.id, form: body.form!, page, fields: normalised, siteUrl: new URL(req.url).origin });
+        const { subject, text } = enquiryEmail({ id: row.id, form: body.form!, page, fields: normalised, siteUrl: new URL(req.url).origin, brochureSent });
         await sendMail({ to, subject, text, replyTo: visitor });
         sent = true;
       } else console.warn("[forms] no enquiry recipient set (Admin → Settings)");
@@ -70,5 +88,6 @@ export async function POST(req: Request) {
     }
     await sql(`UPDATE submissions SET email_sent = $2 WHERE id = $1`, [row.id, sent]);
   }
-  return NextResponse.json({ ok: true });
+  // The footer form tells the visitor whether the brochure is already on its way.
+  return NextResponse.json(body.form === "brochure" ? { ok: true, brochureSent } : { ok: true });
 }

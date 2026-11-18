@@ -38,22 +38,50 @@ export async function sendMail({ to, subject, text, replyTo }: { to: string; sub
 }
 
 const LABELS: Record<string, string> = { name: "Name", email: "Email", phone: "Phone", subject: "Subject", message: "Message" };
-const FORM_NAMES: Record<string, string> = { contact: "Contact form", quote: "Get A Free Quote" };
+const FORM_NAMES: Record<string, string> = { contact: "Contact form", quote: "Get A Free Quote", brochure: "Request our Brochure" };
 
 /** The notification for one enquiry: who sent it, from which page, every field, and where to find it in the admin. */
-export function enquiryEmail(e: { id: number; form: string; page: string; fields: Record<string, string>; siteUrl: string }) {
+export function enquiryEmail(e: { id: number; form: string; page: string; fields: Record<string, string>; siteUrl: string; brochureSent?: boolean }) {
   const who = e.fields.name || e.fields.email || "a visitor";
   const lines = Object.entries(e.fields)
     .filter(([, v]) => v)
     .map(([k, v]) => `${LABELS[k] ?? k.replace(/[-_]+/g, " ").replace(/^./, (c) => c.toUpperCase())}:\n${v}`);
+  const brochureNote =
+    e.form === "brochure"
+      ? e.brochureSent
+        ? ["The brochure was emailed to them automatically.", ""]
+        : ["The brochure was NOT sent automatically (no brochure is chosen in Admin → Settings, or sending failed). Please reply with it.", ""]
+      : [];
   return {
-    subject: `New enquiry from ${who} (${FORM_NAMES[e.form] ?? e.form})`,
+    subject: e.form === "brochure" ? `Brochure request from ${who}` : `New enquiry from ${who} (${FORM_NAMES[e.form] ?? e.form})`,
     text: [
-      `A new enquiry was sent through the ${FORM_NAMES[e.form] ?? e.form} on ${e.siteUrl}${e.page || "/"}.`,
+      `A new ${e.form === "brochure" ? "brochure request" : "enquiry"} was sent through the ${FORM_NAMES[e.form] ?? e.form} form on ${e.siteUrl}${e.page || "/"}.`,
       "",
+      ...brochureNote,
       ...lines.flatMap((l) => [l, ""]),
       `Open it in the admin: ${e.siteUrl}/admin/enquiries/${e.id}/`,
       e.fields.email ? "Reply to this email to answer the sender directly." : "",
+    ].join("\n"),
+  };
+}
+
+/** The visitor's email with a link to the corporate brochure (Admin → Settings → Brochure). */
+export function brochureEmail(b: { url: string; siteUrl: string; contactEmail?: string }) {
+  const link = /^https?:\/\//.test(b.url) ? b.url : b.siteUrl + b.url;
+  return {
+    subject: "Your Bridge & Value corporate brochure",
+    text: [
+      "Hello,",
+      "",
+      "Thank you for your interest in Bridge & Value. You can download our corporate brochure here:",
+      "",
+      link,
+      "",
+      `If you'd like to talk about how we can help, simply reply to this email${b.contactEmail ? ` or write to ${b.contactEmail}` : ""}.`,
+      "",
+      "Kind regards,",
+      "Bridge & Value",
+      b.siteUrl.replace(/^https?:\/\//, ""),
     ].join("\n"),
   };
 }

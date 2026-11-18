@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/auth";
-import { getSettings } from "@/lib/db";
+import { getSettings, sql } from "@/lib/db";
 import { mailConfigured } from "@/lib/mail";
 import { saveSettings } from "../actions";
 import Notice from "../Notice";
@@ -10,6 +10,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   await requireUser("admin");
   const sp = await searchParams;
   const s = await getSettings();
+  const pdfs = await sql<{ path: string; title: string }>(`SELECT path, title FROM media WHERE mime_type = 'application/pdf' ORDER BY created_at DESC, id DESC`);
+  const fileName = (p: string) => decodeURIComponent(p.split("/").pop() ?? p);
   return (
     <>
       <div className="pagehead">
@@ -47,6 +49,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           ) : (
             <div className="notice warn" style={{ margin: 0 }}>Email sending isn&apos;t connected yet (Amazon SES settings). Enquiries are saved in the admin inbox.</div>
           )}
+        </div>
+        <div className="card">
+          <h2>Brochure</h2>
+          <div className="field">
+            <label htmlFor="brochure_url">Brochure emailed from the footer&apos;s &ldquo;Request our Brochure&rdquo; form</label>
+            <select id="brochure_url" name="brochure_url" defaultValue={s.brochure?.url ?? ""}>
+              <option value="">None: notify us and we reply by hand</option>
+              {pdfs.map((p) => (
+                <option key={p.path} value={p.path}>{p.title && p.title !== fileName(p.path) ? `${p.title} (${fileName(p.path)})` : fileName(p.path)}</option>
+              ))}
+            </select>
+            <div className="hint">Upload the PDF under Media first, then choose it here. Visitors get an email with a download link; every request also arrives in Enquiries.</div>
+          </div>
         </div>
         <div className="card">
           <h2>Search engines</h2>
