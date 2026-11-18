@@ -317,7 +317,8 @@ function openPopup(content: HTMLElement) {
   msg.className = "dialog-message dialog-lightbox-message";
   const placeholder = document.createComment("popup");
   content.replaceWith(placeholder);
-  content.style.display = "";
+  // popup.min.css hides every [data-elementor-type=popup]; Elementor shows the open one inline, as here.
+  content.style.display = "block";
   msg.appendChild(content);
   box.append(closeBtn, msg);
   modal.appendChild(box);
