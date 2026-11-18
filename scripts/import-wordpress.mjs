@@ -114,6 +114,10 @@ for (const [k, v] of Object.entries(defaults)) {
   await db.query(`INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO NOTHING`, [k, JSON.stringify(v)]);
 }
 
+// The theme's demo pages stay removed (migration 0003). On a new database that migration ran
+// before any page existed, so apply it again now that they do; it changes nothing otherwise.
+await db.exec(fs.readFileSync("lib/db/migrations/0003_remove_theme_demo_pages.sql", "utf8"));
+
 const count = async (t) => (await db.query(`SELECT count(*)::int AS n FROM ${t}`)).rows[0].n;
 console.log(`pages upserted=${pagesN} page-blocks=${blocksN} global-blocks=${globalN} new-media=${mediaN} new-legacy-enquiries=${subsN}`);
 console.log(`totals: pages=${await count("pages")} blocks=${await count("blocks")} media=${await count("media")} menu=${await count("menu_items")} redirects=${await count("redirects")} submissions=${await count("submissions")}`);
