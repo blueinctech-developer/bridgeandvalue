@@ -267,12 +267,18 @@ export async function saveSettings(formData: FormData) {
   const recipient = str(formData, "notify_recipient");
   for (const e of [email, recipient]) if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) back("/admin/settings/", `"${e}" isn't a valid email.`, "err");
   const delay = Math.min(60, Math.max(0, Number(formData.get("popup_delay")) || 0));
+  // The brochure must be a PDF in the media library.
+  const brochureUrl = str(formData, "brochure_url");
+  if (brochureUrl && !(await sql(`SELECT 1 FROM media WHERE path = $1 AND mime_type = 'application/pdf'`, [brochureUrl])).length) {
+    back("/admin/settings/", "Choose the brochure from the PDFs in Media.", "err");
+  }
   const values = {
     site: { name: str(formData, "site_name") || "Bridge and Value", titleSuffix: " – " + (str(formData, "site_name") || "Bridge and Value") },
     contact: { email, address: str(formData, "contact_address") },
     seo: { googleVerification: str(formData, "google_verification").replace(/[^A-Za-z0-9_-]/g, "") },
     popup: { enabled: formData.get("popup_enabled") === "on", delaySeconds: delay },
     notifications: { recipient },
+    brochure: { url: brochureUrl },
   };
   for (const [k, v] of Object.entries(values)) {
     await sql(`INSERT INTO settings (key, value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`, [k, JSON.stringify(v)]);

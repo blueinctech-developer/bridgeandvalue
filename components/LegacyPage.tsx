@@ -1,5 +1,6 @@
 import type { RenderedPage } from "@/lib/cms";
 import { withMediaHost } from "@/lib/media";
+import { withBrochureForm } from "@/lib/brochure";
 import type { SliderConfig } from "./SiteBehaviors";
 import SiteBehaviors from "./SiteBehaviors";
 
@@ -19,8 +20,8 @@ export default function LegacyPage({ page }: { page: RenderedPage }) {
       </style>
       {/* Apply the original <body> classes before first paint (theme CSS relies on them). */}
       <script dangerouslySetInnerHTML={{ __html: `document.body.className=${JSON.stringify(page.body_class)};` }} />
-      {/* Images are served from the S3 media bucket when one is set up (lib/media.ts). */}
-      <div id="page-content" dangerouslySetInnerHTML={{ __html: withMediaHost(page.html) }} />
+      {/* Images are served from the S3 media bucket when one is set up (lib/media.ts); the footer gets its brochure form back (lib/brochure.ts). */}
+      <div id="page-content" dangerouslySetInnerHTML={{ __html: withBrochureForm(withMediaHost(page.html)) }} />
       <SiteBehaviors path={page.path} sliders={page.sliders as SliderConfig[]} popup={page.popup} />
     </>
   );

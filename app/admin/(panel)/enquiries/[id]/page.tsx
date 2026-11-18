@@ -33,7 +33,7 @@ export default async function Enquiry({ params }: { params: Promise<{ id: string
         <div>
           <div className="muted small"><Link href="/admin/enquiries/">Enquiries</Link></div>
           <h1>{s.fields.name || s.fields.email || "Enquiry"}</h1>
-          <div className="sub">{s.form === "quote" ? "Free quote form" : "Contact form"} · {fmtDate(s.created_at)} · from <span className="mono">{s.page}</span></div>
+          <div className="sub">{s.form === "quote" ? "Free quote form" : s.form === "brochure" ? "Brochure request (footer)" : "Contact form"} · {fmtDate(s.created_at)} · from <span className="mono">{s.page}</span></div>
         </div>
         <div className="row">
           {reply && <a className="btn" href={reply}>Reply by email</a>}

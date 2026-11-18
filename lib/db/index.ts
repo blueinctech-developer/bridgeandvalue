@@ -34,6 +34,8 @@ export type Settings = {
   seo: { googleVerification: string };
   popup: { enabled: boolean; delaySeconds: number };
   notifications: { recipient: string };
+  /** The PDF emailed to visitors who use the footer's "Request our Brochure" form. */
+  brochure?: { url: string };
 };
 
 export async function getSettings(): Promise<Settings> {

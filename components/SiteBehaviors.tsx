@@ -194,6 +194,8 @@ export default function SiteBehaviors({ path, sliders, popup }: { path: string; 
     // Forms: Contact Form 7 and Elementor Pro form -> /api/forms
     $$<HTMLFormElement>("form.wpcf7-form").forEach((f) => on(f, "submit", (e) => { e.preventDefault(); submitCf7(f, path); }));
     $$<HTMLFormElement>("form.elementor-form").forEach((f) => on(f, "submit", (e) => { e.preventDefault(); submitElementor(f, path); }));
+    // Footer "Request our Brochure" (lib/brochure.ts).
+    $$<HTMLFormElement>("form.bv-brochure-form").forEach((f) => on(f, "submit", (e) => { e.preventDefault(); submitBrochure(f, path); }));
 
     return () => cleanups.forEach((c) => c());
   }, [path, sliders, popup.enabled, popup.delaySeconds]);
@@ -329,7 +331,42 @@ function openPopup(content: HTMLElement) {
 
 async function post(form: string, page: string, fields: Record<string, string>) {
   const res = await fetch("/api/forms/", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ form, page, fields }) });
-  return (await res.json()) as { ok: boolean; invalid?: Record<string, string>; message?: string };
+  return (await res.json()) as { ok: boolean; invalid?: Record<string, string>; message?: string; brochureSent?: boolean };
+}
+
+/** Footer brochure request: one email field; the reply text goes in the form's response area. */
+async function submitBrochure(f: HTMLFormElement, page: string) {
+  const out = f.querySelector<HTMLElement>(".mc4wp-response");
+  const button = f.querySelector<HTMLButtonElement>("button[type=submit]");
+  const input = f.querySelector<HTMLInputElement>("input[name=email]");
+  const say = (text: string, ok: boolean) => {
+    if (!out) return;
+    out.textContent = text;
+    out.className = `mc4wp-response ${ok ? "mc4wp-success" : "mc4wp-error"}`;
+    out.style.marginTop = "8px";
+  };
+  const email = input?.value.trim() ?? "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    input?.setAttribute("aria-invalid", "true");
+    input?.focus();
+    say("Please enter a valid email address.", false);
+    return;
+  }
+  input?.setAttribute("aria-invalid", "false");
+  if (button) button.disabled = true;
+  try {
+    const fields: Record<string, string> = {};
+    new FormData(f).forEach((v, k) => (fields[k] = String(v)));
+    const r = await post("brochure", page, fields);
+    if (r.ok) {
+      say(r.brochureSent ? "Thank you! The brochure is on its way to your inbox." : "Thank you! We'll email you our brochure shortly.", true);
+      f.reset();
+    } else say(r.invalid?.email ?? "Something went wrong. Please try again later.", false);
+  } catch {
+    say("Something went wrong. Please try again later.", false);
+  } finally {
+    if (button) button.disabled = false;
+  }
 }
 
 /** Contact Form 7 front-end states and default messages. */

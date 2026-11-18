@@ -6,7 +6,7 @@ import Notice from "../Notice";
 
 export const metadata = { title: "Enquiries" };
 
-const FORM_LABEL: Record<string, string> = { contact: "Contact form", quote: "Free quote" };
+const FORM_LABEL: Record<string, string> = { contact: "Contact form", quote: "Free quote", brochure: "Brochure request" };
 const PER = 25;
 
 export default async function Enquiries({ searchParams }: { searchParams: Promise<{ status?: string; form?: string; q?: string; p?: string; ok?: string; err?: string }> }) {
@@ -37,7 +37,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
       <div className="pagehead">
         <div>
           <h1>Enquiries</h1>
-          <div className="sub">Messages from the contact form and the service-page quote form, including the 37 migrated from WordPress.</div>
+          <div className="sub">Messages from the contact form, the service-page quote form and the footer brochure form, including the 37 migrated from WordPress.</div>
         </div>
         <a className="btn secondary" href={`/admin/enquiries/export/?${new URLSearchParams({ status, ...(sp.form ? { form: sp.form } : {}), ...(sp.q ? { q: sp.q } : {}) })}`}>Export CSV</a>
       </div>
@@ -55,6 +55,7 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
             <option value="">All forms</option>
             <option value="contact">Contact form</option>
             <option value="quote">Free quote</option>
+            <option value="brochure">Brochure request</option>
           </select>
           <input type="search" name="q" defaultValue={sp.q ?? ""} placeholder="Search name, email, message" aria-label="Search enquiries" style={{ width: 230 }} />
           <button className="btn secondary small" type="submit">Filter</button>
