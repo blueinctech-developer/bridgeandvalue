@@ -4,6 +4,7 @@ import LegacyPage from "@/components/LegacyPage";
 import { listPublicPaths, SITE_URL } from "@/lib/cms";
 import { excerptOf, postPath } from "@/lib/blog";
 import { resolvePath } from "@/lib/routes";
+import { absoluteMedia } from "@/lib/media";
 
 type Props = { params: Promise<{ slug?: string[] }> };
 
@@ -33,7 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           siteName: "Bridge and Value",
           publishedTime: post.published_at ?? undefined,
           modifiedTime: post.updated_at,
-          images: post.featured_image ? [{ url: SITE_URL + post.featured_image, alt: post.featured_alt || post.title }] : undefined,
+          // Uploaded images are stored as full addresses (S3 or Blob); migrated ones as paths.
+          images: post.featured_image ? [{ url: absoluteMedia(post.featured_image, SITE_URL), alt: post.featured_alt || post.title }] : undefined,
         }
       : undefined,
   };
@@ -51,7 +53,7 @@ export default async function Page({ params }: Props) {
     datePublished: post.published_at,
     dateModified: post.updated_at,
     mainEntityOfPage: SITE_URL + postPath(post.slug),
-    image: post.featured_image ? SITE_URL + post.featured_image : undefined,
+    image: post.featured_image ? absoluteMedia(post.featured_image, SITE_URL) : undefined,
     author: post.author_name ? { "@type": "Person", name: post.author_name } : undefined,
     publisher: { "@type": "Organization", name: "Bridge and Value", logo: { "@type": "ImageObject", url: `${SITE_URL}/wp-content/uploads/2024/01/logo.svg` } },
   };
